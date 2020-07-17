@@ -7,21 +7,21 @@ public class RubberLeash : MVRScript
 {
     private readonly List<string> _emptyStringsList = new List<string>();
 
-    private JSONStorableStringChooser _targetControllerJSON;
+    private JSONStorableStringChooser _targetRigidbodyJSON;
     private JSONStorableStringChooser _parentAtomJSON;
-    private JSONStorableStringChooser _parentControllerJSON;
+    private JSONStorableStringChooser _parentRigidbodyJSON;
     public JSONStorableStringChooser _parentTransformJSON;
-    private JSONStorableFloat _weight;
-    private JSONStorableFloat _posX;
-    private JSONStorableFloat _posY;
-    private JSONStorableFloat _posZ;
-    private JSONStorableFloat _rotX;
-    private JSONStorableFloat _rotY;
-    private JSONStorableFloat _rotZ;
-    private JSONStorableFloat _rotW;
+    private JSONStorableFloat _weightJSON;
+    private JSONStorableFloat _posXJSON;
+    private JSONStorableFloat _posYJSON;
+    private JSONStorableFloat _posZJSON;
+    private JSONStorableFloat _rotXJSON;
+    private JSONStorableFloat _rotYJSON;
+    private JSONStorableFloat _rotZJSON;
+    private JSONStorableFloat _rotWJSON;
 
-    private FreeControllerV3 _targetController;
-    private FreeControllerV3 _parentController;
+    private Rigidbody _targetRigidbody;
+    private Rigidbody _parentRigidbody;
     private Vector3 _localPosition;
     private Quaternion _localRotation;
     private UIDynamicButton _recordButton;
@@ -35,48 +35,48 @@ public class RubberLeash : MVRScript
     {
         try
         {
-            _targetControllerJSON = new JSONStorableStringChooser("Target Controller", containingAtom.freeControllers.Select(fc => fc.name).ToList(), containingAtom.freeControllers.FirstOrDefault()?.name, "Target Controller", OnControllerUpdated);
-            RegisterStringChooser(_targetControllerJSON);
-            CreateScrollablePopup(_targetControllerJSON, false);
+            _targetRigidbodyJSON = new JSONStorableStringChooser("Target Rgidbody", containingAtom.linkableRigidbodies.Select(rb => rb.name).ToList(), containingAtom.linkableRigidbodies.FirstOrDefault()?.name, "Target Rgidbody", OnTargetRigidbodyUpdated);
+            RegisterStringChooser(_targetRigidbodyJSON);
+            CreateScrollablePopup(_targetRigidbodyJSON, false);
 
             _parentAtomJSON = new JSONStorableStringChooser("Parent Atom", _emptyStringsList, null, "Parent Atom", SyncDropDowns);
             RegisterStringChooser(_parentAtomJSON);
             CreateScrollablePopup(_parentAtomJSON, false);
 
-            _parentControllerJSON = new JSONStorableStringChooser("Parent Controller", SuperController.singleton.GetAtomUIDs(), null, "Parent Controller", OnParentUpdated);
-            RegisterStringChooser(_parentControllerJSON);
-            CreateScrollablePopup(_parentControllerJSON, false);
+            _parentRigidbodyJSON = new JSONStorableStringChooser("Parent Rigidbody", _emptyStringsList, null, "Parent Rigidbody", OnParentRigidbodyUpdated);
+            RegisterStringChooser(_parentRigidbodyJSON);
+            CreateScrollablePopup(_parentRigidbodyJSON, false);
 
             _parentTransformJSON = new JSONStorableStringChooser("Parent Transform", new List<string> { _both, _rotationOnly, _positionOnly, _none }, _both, "Parent Transform");
             RegisterStringChooser(_parentTransformJSON);
             CreateScrollablePopup(_parentTransformJSON, false);
 
-            _weight = new JSONStorableFloat("Weight", 0f, 0f, 1f, true);
-            RegisterFloat(_weight);
-            CreateSlider(_weight, true);
+            _weightJSON = new JSONStorableFloat("Weight", 0f, 0f, 1f, true);
+            RegisterFloat(_weightJSON);
+            CreateSlider(_weightJSON, true);
 
-            _posX = new JSONStorableFloat("PosX", 0f, OnOffsetUpdated, -10f, 10f, false);
-            RegisterFloat(_posX);
-            _posY = new JSONStorableFloat("PosY", 0f, OnOffsetUpdated, -10f, 10f, false);
-            RegisterFloat(_posY);
-            _posZ = new JSONStorableFloat("PosZ", 0f, OnOffsetUpdated, -10f, 10f, false);
-            RegisterFloat(_posZ);
-            _rotX = new JSONStorableFloat("RotX", 0f, OnOffsetUpdated, -10f, 10f, false);
-            RegisterFloat(_rotX);
-            _rotY = new JSONStorableFloat("RotY", 0f, OnOffsetUpdated, -10f, 10f, false);
-            RegisterFloat(_rotY);
-            _rotZ = new JSONStorableFloat("RotZ", 0f, OnOffsetUpdated, -10f, 10f, false);
-            RegisterFloat(_rotZ);
-            _rotW = new JSONStorableFloat("RotW", 0f, OnOffsetUpdated, -10f, 10f, false);
-            RegisterFloat(_rotW);
+            _posXJSON = new JSONStorableFloat("PosX", 0f, OnOffsetUpdated, -10f, 10f, false);
+            RegisterFloat(_posXJSON);
+            _posYJSON = new JSONStorableFloat("PosY", 0f, OnOffsetUpdated, -10f, 10f, false);
+            RegisterFloat(_posYJSON);
+            _posZJSON = new JSONStorableFloat("PosZ", 0f, OnOffsetUpdated, -10f, 10f, false);
+            RegisterFloat(_posZJSON);
+            _rotXJSON = new JSONStorableFloat("RotX", 0f, OnOffsetUpdated, -10f, 10f, false);
+            RegisterFloat(_rotXJSON);
+            _rotYJSON = new JSONStorableFloat("RotY", 0f, OnOffsetUpdated, -10f, 10f, false);
+            RegisterFloat(_rotYJSON);
+            _rotZJSON = new JSONStorableFloat("RotZ", 0f, OnOffsetUpdated, -10f, 10f, false);
+            RegisterFloat(_rotZJSON);
+            _rotWJSON = new JSONStorableFloat("RotW", 0f, OnOffsetUpdated, -10f, 10f, false);
+            RegisterFloat(_rotWJSON);
 
             _recordButton = CreateButton("Record current position");
             _recordButton.button.onClick.AddListener(OnRecordCurrentPosition);
             _recordButton.button.interactable = false;
 
-            OnControllerUpdated(_targetControllerJSON.val);
+            OnTargetRigidbodyUpdated(_targetRigidbodyJSON.val);
             SyncDropDowns(_parentAtomJSON.val);
-            OnParentUpdated(_parentControllerJSON.val);
+            OnParentRigidbodyUpdated(_parentRigidbodyJSON.val);
         }
         catch (Exception e)
         {
@@ -90,66 +90,66 @@ public class RubberLeash : MVRScript
         var atom = _parentAtomJSON.val != null ? SuperController.singleton.GetAtomByUid(_parentAtomJSON.val) : null;
         if (atom == null)
         {
-            _parentControllerJSON.choices = _emptyStringsList;
-            if (_parentControllerJSON.val != null)
+            _parentRigidbodyJSON.choices = _emptyStringsList;
+            if (_parentRigidbodyJSON.val != null)
             {
-                _parentControllerJSON.val = null;
+                _parentRigidbodyJSON.val = null;
             }
         }
         else
         {
-            _parentControllerJSON.choices = atom.freeControllers.Select(fc => fc.name).ToList();
-            if (!_parentControllerJSON.choices.Contains(_parentControllerJSON.val))
+            _parentRigidbodyJSON.choices = atom.linkableRigidbodies.Select(rb => rb.name).ToList();
+            if (!_parentRigidbodyJSON.choices.Contains(_parentRigidbodyJSON.val))
             {
-                _parentControllerJSON.val = _parentControllerJSON.choices.FirstOrDefault();
+                _parentRigidbodyJSON.val = _parentRigidbodyJSON.choices.FirstOrDefault();
             }
         }
     }
 
-    private void OnControllerUpdated(string val)
+    private void OnTargetRigidbodyUpdated(string val)
     {
-        _targetController = containingAtom.freeControllers.FirstOrDefault(fc => fc.name == val);
-        _recordButton.button.interactable = _targetController != null && _parentController != null;
+        _targetRigidbody = containingAtom.linkableRigidbodies.FirstOrDefault(rb => rb.name == val);
+        _recordButton.button.interactable = _targetRigidbody != null && _parentRigidbody != null;
     }
 
-    private void OnParentUpdated(string val)
+    private void OnParentRigidbodyUpdated(string val)
     {
         var atom = _parentAtomJSON.val != null ? SuperController.singleton.GetAtomByUid(_parentAtomJSON.val) : null;
         if (atom == null)
         {
-            _parentController = null;
+            _parentRigidbody = null;
             _recordButton.button.interactable = false;
             return;
         }
-        var controller = atom.freeControllers.FirstOrDefault(fc => fc.name == val);
+        var controller = atom.linkableRigidbodies.FirstOrDefault(rb => rb.name == val);
         if (controller == null)
         {
-            _parentController = null;
+            _parentRigidbody = null;
             _recordButton.button.interactable = false;
             return;
         }
-        _parentController = controller;
-        _recordButton.button.interactable = _targetController != null && _parentController != null;
+        _parentRigidbody = controller.GetComponent<Rigidbody>();
+        _recordButton.button.interactable = _targetRigidbody != null && _parentRigidbody != null;
     }
 
     private void OnOffsetUpdated(float _)
     {
-        _localPosition = new Vector3(_posX.val, _posY.val, _posZ.val);
-        _localRotation = new Quaternion(_rotX.val, _rotY.val, _rotZ.val, _rotZ.val);
+        _localPosition = new Vector3(_posXJSON.val, _posYJSON.val, _posZJSON.val);
+        _localRotation = new Quaternion(_rotXJSON.val, _rotYJSON.val, _rotZJSON.val, _rotZJSON.val);
     }
 
     private void OnRecordCurrentPosition()
     {
-        if (_parentController == null || _targetController == null) return;
-        _localPosition = _parentController.transform.InverseTransformPoint(_targetController.transform.position);
-        _localRotation = Quaternion.Inverse(_parentController.transform.rotation) * _targetController.transform.rotation;
-        _posX.valNoCallback = _localPosition.x;
-        _posY.valNoCallback = _localPosition.y;
-        _posZ.valNoCallback = _localPosition.z;
-        _rotX.valNoCallback = _localRotation.x;
-        _rotY.valNoCallback = _localRotation.y;
-        _rotZ.valNoCallback = _localRotation.z;
-        _rotW.valNoCallback = _localRotation.w;
+        if (_parentRigidbody == null || _targetRigidbody == null) return;
+        _localPosition = _parentRigidbody.transform.InverseTransformPoint(_targetRigidbody.transform.position);
+        _localRotation = Quaternion.Inverse(_parentRigidbody.transform.rotation) * _targetRigidbody.transform.rotation;
+        _posXJSON.valNoCallback = _localPosition.x;
+        _posYJSON.valNoCallback = _localPosition.y;
+        _posZJSON.valNoCallback = _localPosition.z;
+        _rotXJSON.valNoCallback = _localRotation.x;
+        _rotYJSON.valNoCallback = _localRotation.y;
+        _rotZJSON.valNoCallback = _localRotation.z;
+        _rotWJSON.valNoCallback = _localRotation.w;
     }
 
     public void OnEnable()
@@ -179,25 +179,23 @@ public class RubberLeash : MVRScript
     private void OnAtomUIDsChanged(List<string> _)
     {
         SyncDropDowns(_parentAtomJSON.val);
-        OnParentUpdated(_parentControllerJSON.val);
+        OnParentRigidbodyUpdated(_parentRigidbodyJSON.val);
     }
 
     public void FixedUpdate()
     {
-        if (_weight.val == 0f || _parentController == null || _targetController == null || _parentTransformJSON.val == _none) return;
+        if (_weightJSON.val == 0f || _parentRigidbody == null || _targetRigidbody == null || _parentTransformJSON.val == _none) return;
         try
         {
-            // TODO: Cache
-            var rb = _targetController.GetComponent<Rigidbody>();
             if (_parentTransformJSON.val == _both || _parentTransformJSON.val == _positionOnly)
-                rb.MovePosition(Vector3.Slerp(_targetController.transform.position, _parentController.transform.position + _localPosition, _weight.val));
+                _targetRigidbody.MovePosition(Vector3.Slerp(_targetRigidbody.position, _parentRigidbody.position + _localPosition, _weightJSON.val));
             if (_parentTransformJSON.val == _both || _parentTransformJSON.val == _rotationOnly)
-                rb.MoveRotation(Quaternion.Slerp(_targetController.transform.rotation, _parentController.transform.rotation * _localRotation, _weight.val));
+                _targetRigidbody.MoveRotation(Quaternion.Slerp(_targetRigidbody.rotation, _parentRigidbody.rotation * _localRotation, _weightJSON.val));
         }
         catch (Exception e)
         {
             SuperController.LogError($"{nameof(RubberLeash)}.{nameof(FixedUpdate)}: {e}");
-            _weight.val = 0f;
+            _weightJSON.val = 0f;
         }
     }
 }
