@@ -141,8 +141,9 @@ public class RubberLeash : MVRScript
     private void OnRecordCurrentPosition()
     {
         if (_parentRigidbody == null || _targetRigidbody == null) return;
-        _localPosition = _parentRigidbody.transform.InverseTransformPoint(_targetRigidbody.transform.position);
-        _localRotation = Quaternion.Inverse(_parentRigidbody.transform.rotation) * _targetRigidbody.transform.rotation;
+        _localPosition = _parentRigidbody.transform.InverseTransformPoint(_targetRigidbody.position);
+        _localRotation = Quaternion.Inverse(_parentRigidbody.rotation) * _targetRigidbody.rotation;
+        SuperController.LogMessage($"Recorded {_localPosition.x}, {_localPosition.y}, {_localPosition.z}");
         _posXJSON.valNoCallback = _localPosition.x;
         _posYJSON.valNoCallback = _localPosition.y;
         _posZJSON.valNoCallback = _localPosition.z;
@@ -187,10 +188,10 @@ public class RubberLeash : MVRScript
         if (_weightJSON.val == 0f || _parentRigidbody == null || _targetRigidbody == null || _parentTransformJSON.val == _none) return;
         try
         {
-            if (_parentTransformJSON.val == _both || _parentTransformJSON.val == _positionOnly)
-                _targetRigidbody.MovePosition(Vector3.Slerp(_targetRigidbody.position, _parentRigidbody.position + _localPosition, _weightJSON.val));
             if (_parentTransformJSON.val == _both || _parentTransformJSON.val == _rotationOnly)
                 _targetRigidbody.MoveRotation(Quaternion.Slerp(_targetRigidbody.rotation, _parentRigidbody.rotation * _localRotation, _weightJSON.val));
+            if (_parentTransformJSON.val == _both || _parentTransformJSON.val == _positionOnly)
+                _targetRigidbody.MovePosition(Vector3.Slerp(_targetRigidbody.position, _parentRigidbody.transform.TransformPoint(_localPosition), _weightJSON.val));
         }
         catch (Exception e)
         {
