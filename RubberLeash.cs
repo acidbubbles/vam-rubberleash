@@ -37,19 +37,19 @@ public class RubberLeash : MVRScript
         {
             _targetRigidbodyJSON = new JSONStorableStringChooser("Target Rgidbody", containingAtom.linkableRigidbodies.Select(rb => rb.name).ToList(), containingAtom.linkableRigidbodies.FirstOrDefault()?.name, "Target Rgidbody", OnTargetRigidbodyUpdated);
             RegisterStringChooser(_targetRigidbodyJSON);
-            CreateScrollablePopup(_targetRigidbodyJSON, false);
+            CreateScrollablePopup(_targetRigidbodyJSON, false).popupPanelHeight = 1000;
 
             _parentAtomJSON = new JSONStorableStringChooser("Parent Atom", _emptyStringsList, null, "Parent Atom", SyncDropDowns);
             RegisterStringChooser(_parentAtomJSON);
-            CreateScrollablePopup(_parentAtomJSON, false);
+            CreateScrollablePopup(_parentAtomJSON, false).popupPanelHeight = 900;
 
             _parentRigidbodyJSON = new JSONStorableStringChooser("Parent Rigidbody", _emptyStringsList, null, "Parent Rigidbody", OnParentRigidbodyUpdated);
             RegisterStringChooser(_parentRigidbodyJSON);
-            CreateScrollablePopup(_parentRigidbodyJSON, false);
+            CreateScrollablePopup(_parentRigidbodyJSON, false).popupPanelHeight = 800;
 
             _parentTransformJSON = new JSONStorableStringChooser("Parent Transform", new List<string> { _both, _rotationOnly, _positionOnly, _none }, _both, "Parent Transform");
             RegisterStringChooser(_parentTransformJSON);
-            CreateScrollablePopup(_parentTransformJSON, false);
+            CreateScrollablePopup(_parentTransformJSON, false).popupPanelHeight = 300;
 
             _weightJSON = new JSONStorableFloat("Weight", 0f, 0f, 1f, true);
             RegisterFloat(_weightJSON);
@@ -143,7 +143,6 @@ public class RubberLeash : MVRScript
         if (_parentRigidbody == null || _targetRigidbody == null) return;
         _localPosition = _parentRigidbody.transform.InverseTransformPoint(_targetRigidbody.position);
         _localRotation = Quaternion.Inverse(_parentRigidbody.rotation) * _targetRigidbody.rotation;
-        SuperController.LogMessage($"Recorded {_localPosition.x}, {_localPosition.y}, {_localPosition.z}");
         _posXJSON.valNoCallback = _localPosition.x;
         _posYJSON.valNoCallback = _localPosition.y;
         _posZJSON.valNoCallback = _localPosition.z;
