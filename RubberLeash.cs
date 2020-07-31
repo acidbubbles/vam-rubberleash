@@ -7,7 +7,7 @@ public class RubberLeash : MVRScript
 {
     private readonly List<string> _emptyStringsList = new List<string>();
 
-    private JSONStorableStringChooser _targetRigidbodyJSON;
+    private JSONStorableStringChooser _targetControllerJSON;
     private JSONStorableStringChooser _parentAtomJSON;
     private JSONStorableStringChooser _parentRigidbodyJSON;
     public JSONStorableStringChooser _parentTransformJSON;
@@ -20,11 +20,12 @@ public class RubberLeash : MVRScript
     private JSONStorableFloat _rotZJSON;
     private JSONStorableFloat _rotWJSON;
 
-    private Rigidbody _targetRigidbody;
+    private FreeControllerV3 _targetController;
     private Rigidbody _parentRigidbody;
     private Vector3 _localPosition;
     private Quaternion _localRotation;
     private UIDynamicButton _recordButton;
+    private float _scaledWeight = 0f;
     private const string _both = "Both";
     private const string _rotationOnly = "Rotation Only";
     private const string _positionOnly = "Position Only";
@@ -35,9 +36,9 @@ public class RubberLeash : MVRScript
     {
         try
         {
-            _targetRigidbodyJSON = new JSONStorableStringChooser("Target Rgidbody", containingAtom.linkableRigidbodies.Select(rb => rb.name).ToList(), containingAtom.linkableRigidbodies.FirstOrDefault()?.name, "Target Rgidbody", OnTargetRigidbodyUpdated);
-            RegisterStringChooser(_targetRigidbodyJSON);
-            CreateScrollablePopup(_targetRigidbodyJSON, false).popupPanelHeight = 1000;
+            _targetControllerJSON = new JSONStorableStringChooser("Target Controller", containingAtom.freeControllers.Select(fc => fc.name).ToList(), containingAtom.linkableRigidbodies.FirstOrDefault()?.name, "Target Controller", OnTargetControllerUpdated);
+            RegisterStringChooser(_targetControllerJSON);
+            CreateScrollablePopup(_targetControllerJSON, false).popupPanelHeight = 1000;
 
             _parentAtomJSON = new JSONStorableStringChooser("Parent Atom", _emptyStringsList, null, "Parent Atom", SyncDropDowns);
             RegisterStringChooser(_parentAtomJSON);
@@ -51,7 +52,7 @@ public class RubberLeash : MVRScript
             RegisterStringChooser(_parentTransformJSON);
             CreateScrollablePopup(_parentTransformJSON, false).popupPanelHeight = 300;
 
-            _weightJSON = new JSONStorableFloat("Weight", 0f, 0f, 1f, true);
+            _weightJSON = new JSONStorableFloat("Weight", 0f, (float val) => _scaledWeight = ExponentialScale(val, 0.1f, 1f), 0f, 1f, true);
             RegisterFloat(_weightJSON);
             CreateSlider(_weightJSON, true);
 
@@ -74,7 +75,7 @@ public class RubberLeash : MVRScript
             _recordButton.button.onClick.AddListener(OnRecordCurrentPosition);
             _recordButton.button.interactable = false;
 
-            OnTargetRigidbodyUpdated(_targetRigidbodyJSON.val);
+            OnTargetControllerUpdated(_targetControllerJSON.val);
             SyncDropDowns(_parentAtomJSON.val);
             OnParentRigidbodyUpdated(_parentRigidbodyJSON.val);
         }
@@ -106,10 +107,10 @@ public class RubberLeash : MVRScript
         }
     }
 
-    private void OnTargetRigidbodyUpdated(string val)
+    private void OnTargetControllerUpdated(string val)
     {
-        _targetRigidbody = containingAtom.linkableRigidbodies.FirstOrDefault(rb => rb.name == val);
-        _recordButton.button.interactable = _targetRigidbody != null && _parentRigidbody != null;
+        _targetController = containingAtom.freeControllers.FirstOrDefault(fc => fc.name == val);
+        _recordButton.button.interactable = _targetController != null && _parentRigidbody != null;
     }
 
     private void OnParentRigidbodyUpdated(string val)
@@ -129,7 +130,7 @@ public class RubberLeash : MVRScript
             return;
         }
         _parentRigidbody = controller.GetComponent<Rigidbody>();
-        _recordButton.button.interactable = _targetRigidbody != null && _parentRigidbody != null;
+        _recordButton.button.interactable = _targetController != null && _parentRigidbody != null;
     }
 
     private void OnOffsetUpdated(float _)
@@ -140,9 +141,9 @@ public class RubberLeash : MVRScript
 
     private void OnRecordCurrentPosition()
     {
-        if (_parentRigidbody == null || _targetRigidbody == null) return;
-        _localPosition = _parentRigidbody.transform.InverseTransformPoint(_targetRigidbody.position);
-        _localRotation = Quaternion.Inverse(_parentRigidbody.rotation) * _targetRigidbody.rotation;
+        if (_parentRigidbody == null || _targetController == null) return;
+        _localPosition = _parentRigidbody.transform.InverseTransformPoint(_targetController.control.position);
+        _localRotation = Quaternion.Inverse(_parentRigidbody.rotation) * _targetController.control.rotation;
         _posXJSON.valNoCallback = _localPosition.x;
         _posYJSON.valNoCallback = _localPosition.y;
         _posZJSON.valNoCallback = _localPosition.z;
@@ -184,18 +185,33 @@ public class RubberLeash : MVRScript
 
     public void FixedUpdate()
     {
-        if (_weightJSON.val == 0f || _parentRigidbody == null || _targetRigidbody == null || _parentTransformJSON.val == _none) return;
+        if (_weightJSON.val == 0f || _parentRigidbody == null || _targetController == null || _parentTransformJSON.val == _none) return;
         try
         {
             if (_parentTransformJSON.val == _both || _parentTransformJSON.val == _rotationOnly)
-                _targetRigidbody.MoveRotation(Quaternion.Slerp(_targetRigidbody.rotation, _parentRigidbody.rotation * _localRotation, _weightJSON.val));
+            {
+                var targetRotation = _parentRigidbody.rotation * _localRotation;
+                _targetController.control.rotation = Quaternion.Slerp(_targetController.control.rotation, targetRotation, _scaledWeight);
+            }
             if (_parentTransformJSON.val == _both || _parentTransformJSON.val == _positionOnly)
-                _targetRigidbody.MovePosition(Vector3.Slerp(_targetRigidbody.position, _parentRigidbody.transform.TransformPoint(_localPosition), _weightJSON.val));
+            {
+                var targetPosition = _parentRigidbody.transform.TransformPoint(_localPosition);
+                _targetController.control.position = Vector3.Lerp(_targetController.control.position, targetPosition, _scaledWeight);
+            }
         }
         catch (Exception e)
         {
             SuperController.LogError($"{nameof(RubberLeash)}.{nameof(FixedUpdate)}: {e}");
             _weightJSON.val = 0f;
         }
+    }
+
+    public static float ExponentialScale(float inputValue, float midValue, float maxValue)
+    {
+        var m = maxValue / midValue;
+        var c = Mathf.Log(Mathf.Pow(m - 1, 2));
+        var b = maxValue / (Mathf.Exp(c) - 1);
+        var a = -1 * b;
+        return a + b * Mathf.Exp(c * inputValue);
     }
 }
