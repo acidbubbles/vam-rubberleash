@@ -71,6 +71,9 @@ public class RubberLeash : MVRScript
             _rotWJSON = new JSONStorableFloat("RotW", 0f, OnOffsetUpdated, -10f, 10f, false);
             RegisterFloat(_rotWJSON);
 
+            var recordJSON = new JSONStorableAction("Record Current Position", OnRecordCurrentPosition);
+            RegisterAction(recordJSON);
+
             _recordButton = CreateButton("Record current position");
             _recordButton.button.onClick.AddListener(OnRecordCurrentPosition);
             _recordButton.button.interactable = false;
