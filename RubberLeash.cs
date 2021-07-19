@@ -139,7 +139,7 @@ public class RubberLeash : MVRScript
     private void OnOffsetUpdated(float _)
     {
         _localPosition = new Vector3(_posXJSON.val, _posYJSON.val, _posZJSON.val);
-        _localRotation = new Quaternion(_rotXJSON.val, _rotYJSON.val, _rotZJSON.val, _rotZJSON.val);
+        _localRotation = new Quaternion(_rotXJSON.val, _rotYJSON.val, _rotZJSON.val, _rotWJSON.val);
     }
 
     private void OnRecordCurrentPosition()
