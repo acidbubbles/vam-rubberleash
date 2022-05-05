@@ -1,6 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using SimpleJSON;
 using UnityEngine;
 
 public class RubberLeash : MVRScript
@@ -20,6 +22,7 @@ public class RubberLeash : MVRScript
     private JSONStorableFloat _rotZJSON;
     private JSONStorableFloat _rotWJSON;
 
+    private bool _restored;
     private FreeControllerV3 _targetController;
     private Rigidbody _parentRigidbody;
     private Vector3 _localPosition;
@@ -81,10 +84,23 @@ public class RubberLeash : MVRScript
             OnTargetControllerUpdated(_targetControllerJSON.val);
             SyncDropDowns(_parentAtomJSON.val);
             OnParentRigidbodyUpdated(_parentRigidbodyJSON.val);
+
+            SuperController.singleton.StartCoroutine(DeferredInit());
         }
         catch (Exception e)
         {
             SuperController.LogError($"{nameof(RubberLeash)}.{nameof(Init)}: {e}");
+        }
+    }
+
+    private IEnumerator DeferredInit()
+    {
+        yield return new WaitForEndOfFrame();
+        if (this == null) yield break;
+        if (!_restored)
+        {
+            containingAtom.RestoreFromLast(this);
+            _restored = true;
         }
     }
 
@@ -216,5 +232,11 @@ public class RubberLeash : MVRScript
         var b = maxValue / (Mathf.Exp(c) - 1);
         var a = -1 * b;
         return a + b * Mathf.Exp(c * inputValue);
+    }
+
+    public override void RestoreFromJSON(JSONClass jc, bool restorePhysical = true, bool restoreAppearance = true, JSONArray presetAtoms = null, bool setMissingToDefault = true)
+    {
+        base.RestoreFromJSON(jc, restorePhysical, restoreAppearance, presetAtoms, setMissingToDefault);
+        _restored = true;
     }
 }
