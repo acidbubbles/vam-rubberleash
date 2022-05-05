@@ -36,7 +36,7 @@ public class RubberLeash : MVRScript
     {
         try
         {
-            _targetControllerJSON = new JSONStorableStringChooser("Target Controller", containingAtom.freeControllers.Select(fc => fc.name).ToList(), containingAtom.linkableRigidbodies.FirstOrDefault()?.name, "Target Controller", OnTargetControllerUpdated);
+            _targetControllerJSON = new JSONStorableStringChooser("Target Controller", containingAtom.freeControllers.Select(fc => fc.name).ToList(), containingAtom.mainController.name, "Target Controller", OnTargetControllerUpdated);
             RegisterStringChooser(_targetControllerJSON);
             CreateScrollablePopup(_targetControllerJSON, false).popupPanelHeight = 1000;
 
