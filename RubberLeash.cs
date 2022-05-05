@@ -90,7 +90,7 @@ public class RubberLeash : MVRScript
 
     private void SyncDropDowns(string val)
     {
-        _parentAtomJSON.choices = SuperController.singleton.GetAtomUIDs();
+        _parentAtomJSON.choices = SuperController.singleton.GetAtomUIDs().Where(x => x != containingAtom.uid).ToList();
         var atom = _parentAtomJSON.val != null ? SuperController.singleton.GetAtomByUid(_parentAtomJSON.val) : null;
         if (atom == null)
         {
